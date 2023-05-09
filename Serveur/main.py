@@ -16,14 +16,14 @@ for f in glob.glob("*.mp4"):
 
 chanson_passe = [] # Liste stockant les chansons passées
 app = Flask(__name__) # Initialisation du serveur
-CORS(app)
+CORS(app) # Ligne de code nécessaire pour empêcher l'erreur de Cross-Origin
 knn, precision = LoadModel() # Stocke le model dans la variable knn
 print(f"Le model a une précision de {precision*100}%") # Énonce la précision du model. Envirion 90%.
 
-limiter = Limiter(get_remote_address, app=app)
-i = -1
-@app.route("/upload", methods=["GET"])
-@limiter.limit("1/minute")
+limiter = Limiter(get_remote_address, app=app) # Initiation du limiteur qui permet de limiter le nombre de requête fait par un utilisateur (car parfois la fonction fetch en JavaScript fait 2 requêtes)
+i = -1 # initiation de la variable i, qui permettra de donner un nom unique au 5 dernières chanson lorsqu'elle sont installées (si 5 requêtes sont envoyées rapidement, la commande ffmpeg n'aurait donc pas de bug)
+@app.route("/upload", methods=["GET"]) # La fonction analyse_chanson est éxecutée lorsque une requête est fait au enpoint "/upload"
+@limiter.limit("1/minute") # Définit la limite de une requête par minute
 def analyse_chanson():
     global i
     # On obtient le fichier audio
@@ -31,7 +31,7 @@ def analyse_chanson():
     titre = request.args.get("titre") # Stocke le nom de la chanson dans la variable titre
     search = Search(f"{titre} {artiste}") # Cherche la chanson sur YouTube
     audio = YouTube(search.results[0].watch_url, use_oauth=True).streams.filter(only_audio=True).first() # Séléctionne la première vidéo qui apparait
-    i = (i + 1)%5
+    i = (i + 1)%5 # i peut prendre les valeurs 0, 1, 2, 3, ou 4
     audio.download(filename=f"{i}.mp4") # Installation du fichier audio
 
     command = f"ffmpeg -loglevel quiet -i {i}.mp4 {i}.mp3" # Commande pour changer le fichier audio pour pouvoir le traiter
@@ -49,6 +49,7 @@ def analyse_chanson():
     os.rename(f"{i}.mp3", f"chanson_passe/{artiste} {titre}.mp3") # On change le nom du fichier, puis on le déplace dans le dossier chanson_passe, qui stocke les fichiers des 5 dernières chansons
     y_harmonique = librosa.effects.harmonic(y) # On extrait la partie "harmonique" de la chanson, plus intéressante pour cette application
     gamme = trouve_gamme(y_harmonique) # Détermine la clé de la chanson
+    # Trouve les notes de la gamme majeur ayant les notes de la première estimation
     gamme_maj = gamme[0]
     if gamme_maj > 11:
         gamme_maj = (gamme_maj + 3)%12
@@ -58,12 +59,12 @@ def analyse_chanson():
     info["temps_accord"] = temps_accords # Met l'information sur les accords de la chanson dans le dictionnaire info
     return jsonify(info) # Renvoie les informations de la chanson à l'utilisateur
 
-@app.route("/chanson")
+@app.route("/chanson") # La fonction telecharge_chanson est éxecutée lorsque une requête est fait au endpoint "/chanson"
 def telecharge_chanson():
     artiste = request.args.get("artiste") # Stocke le nom de l'artiste dans la variable artiste
     titre = request.args.get("titre") # Stocke le nom de la chanson dans la variable titre
     if os.path.isfile(f"chanson_passe/{artiste} {titre}.mp3"): # Si le fichier existe
         return send_file(f"chanson_passe/{artiste} {titre}.mp3", as_attachment=True) # Renvoie le fichier de la chanson à l'utilisateur
-    return "Ce fichier n'existe pas"
+    return "Ce fichier n'existe pas" # Si le fichier n'a pas été trouvé, on renvoie ce message
 
 app.run(host='0.0.0.0', port=80) # Commence le serveur
