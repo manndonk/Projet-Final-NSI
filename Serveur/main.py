@@ -29,6 +29,8 @@ def analyse_chanson():
     # On obtient le fichier audio
     artiste = request.args.get("artiste") # Stocke le nom de l'artiste dans la variable artiste
     titre = request.args.get("titre") # Stocke le nom de la chanson dans la variable titre
+    if artiste == "undefined" or titre == "undefined": # S'il n'y a pas de nom de artiste ou de titre
+        return "La requête ne définit pas une chanson" # Renvoie ce message
     search = Search(f"{titre} {artiste}") # Cherche la chanson sur YouTube
     audio = YouTube(search.results[0].watch_url, use_oauth=True).streams.filter(only_audio=True).first() # Séléctionne la première vidéo qui apparait
     i = (i + 1)%5 # i peut prendre les valeurs 0, 1, 2, 3, ou 4
@@ -50,9 +52,9 @@ def analyse_chanson():
     y_harmonique = librosa.effects.harmonic(y) # On extrait la partie "harmonique" de la chanson, plus intéressante pour cette application
     gamme = trouve_gamme(y_harmonique) # Détermine la clé de la chanson
     # Trouve les notes de la gamme majeur ayant les notes de la première estimation
-    gamme_maj = gamme[0]
-    if gamme_maj > 11:
-        gamme_maj = (gamme_maj + 3)%12
+    gamme_maj = gamme[0] # Prend la première gamme estimée
+    if gamme_maj > 11: # Si c'est une gamme mineure
+        gamme_maj = (gamme_maj + 3)%12 # Prend la gamme majeur qui a les mêmes notes
     temps_accords = trouve_accords(y_harmonique, sr, knn, diatonique=True, cle_maj=gamme_maj) # Détermine les accords de la chanson
     info["cle"] = gamme # Met l'information sur la gamme de la chanson dans le dictionnaire info
     info["tempo"] = fetch_tempo(y, sr) # Met l'information sur le tempo de la chanson dans le dictionnaire info
