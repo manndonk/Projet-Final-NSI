@@ -22,7 +22,7 @@ print(f"Le model a une précision de {precision*100}%") # Énonce la précision 
 
 limiter = Limiter(get_remote_address, app=app) # Initiation du limiteur qui permet de limiter le nombre de requête fait par un utilisateur (car parfois la fonction fetch en JavaScript fait 2 requêtes)
 i = -1 # initiation de la variable i, qui permettra de donner un nom unique au 5 dernières chanson lorsqu'elle sont installées (si 5 requêtes sont envoyées rapidement, la commande ffmpeg n'aurait donc pas de bug)
-@app.route("/upload", methods=["GET"]) # La fonction analyse_chanson est éxecutée lorsque une requête est fait au enpoint "/upload"
+@app.route("/data", methods=["GET"]) # La fonction analyse_chanson est éxecutée lorsque une requête est fait au enpoint "/upload"
 @limiter.limit("1/minute") # Définit la limite de une requête par minute
 def analyse_chanson():
     global i
